@@ -1,0 +1,33 @@
+{
+  "name": "happy-birthday",
+  "version": "1.0.0",
+  "description": "Personalized Birthday Website for Artii",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sanumittal946-eng/Happy_Birthday.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sanumittal946-eng/Happy_Birthday/issues"
+  },
+  "homepage": "https://sanumittal946-eng.github.io/Happy_Birthday/",
+  "dependencies": {
+    "canvas-confetti": "^1.9.4",
+    "framer-motion": "^12.36.0",
+    "lucide-react": "^0.577.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.0",
+    "vite": "^8.0.0"
+  }
+}

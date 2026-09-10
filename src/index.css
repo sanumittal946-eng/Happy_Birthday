@@ -336,7 +336,7 @@ body {
   user-select: none;
 }
 
-.gallery-crossfade-img {
+.gallery-canvas {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -348,9 +348,26 @@ body {
   will-change: opacity;
 }
 
-.gallery-crossfade-img.active {
+.gallery-canvas.active {
   opacity: 1;
+}
+
+.security-glass-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
   pointer-events: auto;
+  background: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Global Anti-Inspect & Save Protection */
+.no-inspect-protection {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .gallery-arrow {

@@ -76,6 +76,80 @@ export default function PageTwoGallery({
     }
   };
 
+  // Canvas references for zero-DOM-exposure photo rendering
+  const canvasRefA = useRef(null);
+  const canvasRefB = useRef(null);
+  const [activeCanvas, setActiveCanvas] = useState('A');
+  const imagesCache = useRef({});
+
+  // Helper to draw image cover onto canvas
+  const drawImageCover = (canvas, img) => {
+    if (!canvas || !img) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const w = canvas.width;
+    const h = canvas.height;
+    const imgW = img.naturalWidth || img.width;
+    const imgH = img.naturalHeight || img.height;
+    if (!imgW || !imgH) return;
+
+    const hRatio = w / imgW;
+    const vRatio = h / imgH;
+    const ratio = Math.max(hRatio, vRatio);
+    const centerShiftX = (w - imgW * ratio) / 2;
+    const centerShiftY = (h - imgH * ratio) / 2;
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(
+      img,
+      0,
+      0,
+      imgW,
+      imgH,
+      centerShiftX,
+      centerShiftY,
+      imgW * ratio,
+      imgH * ratio
+    );
+  };
+
+  // Preload photos into memory (never in the DOM tree)
+  useEffect(() => {
+    photos.forEach((src) => {
+      const fullUrl = getFullUrl(src);
+      if (!imagesCache.current[fullUrl]) {
+        const img = new Image();
+        img.src = fullUrl;
+        imagesCache.current[fullUrl] = img;
+      }
+    });
+  }, [photos]);
+
+  // Render to canvas on index change with smooth alternating crossfade
+  useEffect(() => {
+    const currentPhotoUrl = getFullUrl(photos[currentIndex]);
+    let img = imagesCache.current[currentPhotoUrl];
+
+    const renderToTargetCanvas = (loadedImg) => {
+      const nextTarget = activeCanvas === 'A' ? 'B' : 'A';
+      const targetCanvas = nextTarget === 'A' ? canvasRefA.current : canvasRefB.current;
+      drawImageCover(targetCanvas, loadedImg);
+      setActiveCanvas(nextTarget);
+    };
+
+    if (img && img.complete && img.naturalWidth > 0) {
+      renderToTargetCanvas(img);
+    } else {
+      const fallbackImg = new Image();
+      fallbackImg.onload = () => {
+        imagesCache.current[currentPhotoUrl] = fallbackImg;
+        renderToTargetCanvas(fallbackImg);
+      };
+      fallbackImg.src = currentPhotoUrl;
+    }
+  }, [currentIndex, photos]);
+
   return (
     <div className="page-wrapper page-two-container">
       {/* Background Floating Balloons (Compositor Thread CSS) */}
@@ -100,21 +174,30 @@ export default function PageTwoGallery({
           </p>
         </div>
 
-        {/* Centered Photo Gallery with Opacity Crossfade */}
+        {/* Centered Photo Canvas Gallery (No <img> tags anywhere in DOM) */}
         <div
-          className="photo-slideshow-container"
+          className="photo-slideshow-container secure-container"
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
-          {photos.map((src, idx) => (
-            <img
-              key={idx}
-              src={getFullUrl(src)}
-              alt={`Memory ${idx + 1}`}
-              className={`gallery-crossfade-img ${idx === currentIndex ? 'active' : ''}`}
-              loading={idx < 2 ? 'eager' : 'lazy'}
-            />
-          ))}
+          {/* Dual Canvas Layer for Seamless Hardware Crossfading */}
+          <canvas
+            ref={canvasRefA}
+            width={900}
+            height={900}
+            className={`gallery-canvas ${activeCanvas === 'A' ? 'active' : ''}`}
+            aria-label="Birthday Memory"
+          />
+          <canvas
+            ref={canvasRefB}
+            width={900}
+            height={900}
+            className={`gallery-canvas ${activeCanvas === 'B' ? 'active' : ''}`}
+            aria-label="Birthday Memory"
+          />
+
+          {/* Anti-Inspect Glass Shield prevents touch callout, drag, and element picking */}
+          <div className="security-glass-overlay" aria-hidden="true" />
 
           {/* Navigation Arrows */}
           <button

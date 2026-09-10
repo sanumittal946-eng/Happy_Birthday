@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { config } from './config';
@@ -9,7 +9,7 @@ import './index.css';
 export default function App() {
   const [currentPage, setCurrentPage] = useState(1); // 1: Drop-In Reveal, 2: Gallery & Wishes
   const [isMuted, setIsMuted] = useState(false);
-  const audioRef = useRef(null);
+  const audioInstance = useRef(null);
 
   const getFullUrl = (path) => {
     if (!path) return '';
@@ -21,11 +21,58 @@ export default function App() {
     return encodeURI(full);
   };
 
+  // Anti-Inspect Security & In-Memory Audio Init
+  useEffect(() => {
+    // 1. In-memory audio (Zero <audio> tags in DOM inspector)
+    const audio = new Audio();
+    audio.loop = true;
+    audio.preload = 'auto';
+    audio.src = getFullUrl(config.musicFile);
+    audioInstance.current = audio;
+
+    // 2. Disable Right-Click context menu
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+      return false;
+    };
+
+    // 3. Disable DevTools keyboard shortcuts (F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U, Ctrl+S)
+    const handleKeyDown = (e) => {
+      if (
+        e.key === 'F12' ||
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)) ||
+        ((e.ctrlKey || e.metaKey) && ['U', 'u', 'S', 's'].includes(e.key))
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+    };
+
+    // 4. Disable image/canvas dragging
+    const handleDragStart = (e) => {
+      e.preventDefault();
+      return false;
+    };
+
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('dragstart', handleDragStart);
+
+    return () => {
+      audio.pause();
+      audio.src = '';
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('dragstart', handleDragStart);
+    };
+  }, []);
+
   const handleSurpriseClick = () => {
-    // 1. Start audio immediately on this user tap (required gesture for browser autoplay)
-    if (audioRef.current) {
-      audioRef.current.volume = 0.45;
-      audioRef.current.play().catch((err) => {
+    // 1. Play in-memory audio
+    if (audioInstance.current) {
+      audioInstance.current.volume = 0.45;
+      audioInstance.current.play().catch((err) => {
         console.warn('Audio play request handled:', err);
       });
     }
@@ -45,22 +92,15 @@ export default function App() {
   };
 
   const handleToggleMute = () => {
-    if (audioRef.current) {
+    if (audioInstance.current) {
       const nextMuted = !isMuted;
-      audioRef.current.muted = nextMuted;
+      audioInstance.current.muted = nextMuted;
       setIsMuted(nextMuted);
     }
   };
 
   return (
-    <main className="master-app-viewport">
-      {/* Native background audio element */}
-      <audio
-        ref={audioRef}
-        src={getFullUrl(config.musicFile)}
-        loop
-        preload="auto"
-      />
+    <main className="master-app-viewport no-inspect-protection">
 
       {/* Page transitions with Framer Motion (fade + slight zoom, ~400-500ms) */}
       <AnimatePresence mode="wait">
